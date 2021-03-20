@@ -12,13 +12,18 @@ function getVersionText() {
 }
 
 function install() {
-    $file.delete(SHARED_PATH)
-    $file.copy({
-        src: "/EasyJsBox",
-        dst: SHARED_PATH
-    })
-    $("version-text").text = getVersionText()
-    $("install-button").title = !getYourVersion() ? "Install" : "Reinstall"
+    try {
+        $file.delete(SHARED_PATH)
+        $file.copy({
+            src: "/EasyJsBox",
+            dst: SHARED_PATH
+        })
+        $("version-text").text = getVersionText()
+        $("install-button").title = "Reinstall"
+        $ui.success("Success!")
+    } catch (error) {
+        $ui.alert(error)
+    }
 }
 
 function render() {
@@ -63,7 +68,7 @@ function render() {
                     tapped: () => {
                         $ui.alert({
                             title: "Continue",
-                            message: "About to start installation.",
+                            message: !getYourVersion() ? "About to start installation." : "Are you sure you want to reinstall?",
                             actions: [
                                 {
                                     title: "OK",
