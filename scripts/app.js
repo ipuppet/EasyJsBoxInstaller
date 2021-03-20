@@ -1,4 +1,5 @@
 const SHARED_PATH = "shared://EasyJsBox"
+const BUILD_PATH = "/assets/build"
 const VERSION = require("../EasyJsBox/src/kernel").VERSION
 const INSTALLER_VERSION = JSON.parse($file.read("/config.json").string).info.version
 
@@ -11,19 +12,39 @@ function getVersionText() {
     return `Your Version: ${getYourVersion()}\nEasyJsBox Version: ${VERSION}\nInstaller Version: ${INSTALLER_VERSION}`
 }
 
+function build(callback) {
+    $nodejs.run({
+        path: "/scripts/builder.js",
+        query: {
+            path: $file.absolutePath("EasyJsBox"),
+            savePath: $file.absolutePath(BUILD_PATH)
+        },
+        listener: {
+            id: "buildProject",
+            handler: result => {
+                try {
+                    callback(result)
+                } catch (error) {
+                    console.error(error)
+                }
+            }
+        }
+    })
+}
+
 function install() {
-    try {
+    // 压缩源码
+    build(result => {
+        if (result.error) throw result.error
         $file.delete(SHARED_PATH)
         $file.copy({
-            src: "/EasyJsBox",
+            src: BUILD_PATH,
             dst: SHARED_PATH
         })
         $("version-text").text = getVersionText()
         $("install-button").title = "Reinstall"
         $ui.success("Success!")
-    } catch (error) {
-        $ui.alert(error)
-    }
+    })
 }
 
 function render() {

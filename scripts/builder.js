@@ -1,11 +1,17 @@
 const fs = require("fs")
 const path = require("path")
-const UglifyJS = require("uglify-es")
+const UglifyJS = require("uglify-js")
 
 const rootPath = $context.query.path
 const savePath = $context.query.savePath
-const projectStructure = []
-function getProjectStructure(pathNow) {
+
+try { fs.unlinkSync(savePath) } catch (error) { }
+
+function message(msg) {
+    console.log(msg)
+}
+
+function getProjectStructure(pathNow, projectStructure = []) {
     // 忽略 node_modules
     if (pathNow.indexOf("node_modules") > 0) return
     const files = {}
@@ -15,44 +21,50 @@ function getProjectStructure(pathNow) {
         const itemPath = path.join(pathNow, item)
         const shortItemPath = itemPath.replace(rootPath, "")
         if (fs.lstatSync(itemPath).isDirectory()) {
-            getProjectStructure(itemPath)
+            getProjectStructure(itemPath, projectStructure)
         } else {
-            let fileContent = fs.readFileSync(itemPath, "utf-8")
             if (itemPath.slice(-3) === ".js") {
+                let fileContent = fs.readFileSync(itemPath, "utf-8")
                 const result = UglifyJS.minify(fileContent)
                 if (result.error) throw result.error
                 fileContent = result.code
-                console.log("Builded: ", shortItemPath)
-            } else {
-                console.log("Normal file: ", shortItemPath)
+                message(`File: ${shortItemPath}`)
+                files[item] = fileContent
+            } else if (itemPath.indexOf("LICENSE") > -1) {
+                files[item] = fs.readFileSync(itemPath, "utf-8")
             }
-            files[item] = fileContent
         }
     })
     projectStructure.push({
         path: shortPath,
         files: files
     })
+    return projectStructure
+}
+
+function mkdirsSync(dirname) {
+    if (fs.existsSync(dirname)) {
+        return true
+    } else {
+        if (mkdirsSync(path.dirname(dirname))) {
+            fs.mkdirSync(dirname)
+            return true
+        }
+    }
 }
 
 function build() {
-    const code = {}
-    projectStructure.forEach(dir => {
+    getProjectStructure(rootPath).forEach(dir => {
         Object.keys(dir.files).forEach(fileName => {
-            if (fileName.slice(-3) === ".js")
-                code[dir.path + "/" + fileName] = dir.files[fileName]
+            const filePath = path.join(savePath, dir.path)
+            mkdirsSync(filePath)
+            fs.writeFileSync(path.join(filePath, fileName), dir.files[fileName])
         })
     })
-    console.log(code)
-    const result = UglifyJS.minify(code)
-    if (result.error) throw result.error
-    return result.code
 }
 
-console.log("Build start.")
-getProjectStructure(rootPath)
-console.log(projectStructure)
-//fs.writeFileSync(savePath, build())
-console.log("Build done")
-
-$jsbox.notify("buildProject", { success: true })
+message("Build start.")
+let error
+try { build() } catch (e) { error = e }
+$jsbox.notify("buildProject", { error })
+message("Build done.")
