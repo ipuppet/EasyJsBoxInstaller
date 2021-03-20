@@ -32,7 +32,7 @@ function build(callback) {
     })
 }
 
-function install() {
+function install(callback) {
     // 压缩源码
     build(result => {
         if (result.error) throw result.error
@@ -44,6 +44,7 @@ function install() {
         $("version-text").text = getVersionText()
         $("install-button").title = "Reinstall"
         $ui.success("Success!")
+        callback()
     })
 }
 
@@ -73,6 +74,15 @@ function render() {
                     make.top.inset(20)
                 },
             },
+            {
+                type: "spinner",
+                props: {
+                    loading: true
+                },
+                layout: (make, view) => {
+                    make.center.equalTo(view.super)
+                }
+            },
             { // Install
                 type: "button",
                 props: {
@@ -86,14 +96,15 @@ function render() {
                     make.center.equalTo(view.super)
                 },
                 events: {
-                    tapped: () => {
+                    tapped: sender => {
+                        sender.hidden = true
                         $ui.alert({
                             title: "Continue",
                             message: !getYourVersion() ? "About to start installation." : "Are you sure you want to reinstall?",
                             actions: [
                                 {
                                     title: "OK",
-                                    handler: install
+                                    handler: () => install(() => sender.hidden = false)
                                 },
                                 { title: "Cancel" }
                             ]
