@@ -25,10 +25,12 @@ function render() {
     $ui.render({
         type: "view",
         props: {
-            navButtons: [{
-                image: $image("/assets/icon/github.png"),
-                handler: () => $app.openURL("https://github.com/ipuppet/EasyJsBoxInstaller")
-            }]
+            navButtons: [
+                {
+                    image: $image("/assets/icon/github.png"),
+                    handler: () => $app.openURL("https://github.com/ipuppet/EasyJsBoxInstaller")
+                }
+            ]
         },
         layout: $layout.fill,
         views: [
