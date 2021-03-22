@@ -1,15 +1,13 @@
-const SHARED_PATH = "shared://EasyJsBox"
+const { VERSION, SHARED_PATH } = require("../EasyJsBox/src/kernel")
 const BUILD_PATH = "/assets/build"
-const VERSION = require("../EasyJsBox/src/kernel").VERSION
 const INSTALLER_VERSION = JSON.parse($file.read("/config.json").string).info.version
 
-function getYourVersion() {
-    const VERSION = eval($file.read(`${SHARED_PATH}/src/kernel.js`)?.string)?.VERSION
-    return VERSION
+function yourVersion() {
+    return eval($file.read(`${SHARED_PATH}/src/kernel.js`)?.string)?.VERSION
 }
 
 function getVersionText() {
-    return `Your Version: ${getYourVersion()}\nEasyJsBox Version: ${VERSION}\nInstaller Version: ${INSTALLER_VERSION}`
+    return `Your Version: ${yourVersion()}\nEasyJsBox Version: ${VERSION}\nInstaller Version: ${INSTALLER_VERSION}`
 }
 
 function build(callback) {
@@ -35,15 +33,43 @@ function build(callback) {
 function install(callback) {
     // 压缩源码
     build(result => {
-        if (result.error) throw result.error
-        $file.delete(SHARED_PATH)
-        $file.copy({
-            src: BUILD_PATH,
-            dst: SHARED_PATH
-        })
-        $("version-text").text = getVersionText()
-        $("install-button").title = "Reinstall"
-        $ui.success("Success!")
+        if (result.error) {
+            if (result.error) {
+                if (result.error.code === "MODULE_NOT_FOUND") {
+                    $ui.alert({
+                        title: "Error",
+                        message: "Please resolve nodejs dependencies.",
+                        actions: [
+                            {
+                                title: "How?",
+                                handler: () => {
+                                    $app.openURL("https://blog.ipuppet.top/detail/41/")
+                                }
+                            },
+                            { title: "Ok" }
+                        ]
+                    })
+                } else {
+                    console.error(result.error)
+                    $ui.error("Error! See console.")
+                }
+            }
+        } else {
+            $file.delete(SHARED_PATH)
+            $file.copy({
+                src: BUILD_PATH,
+                dst: SHARED_PATH
+            })
+            // 项目目录结构
+            $file.write({
+                data: $data({ string: JSON.stringify(result.structure) }),
+                path: `${SHARED_PATH}/structure.json`
+            })
+            console.log(result.structure)
+            $("version-text").text = getVersionText()
+            $("install-button").title = "Reinstall"
+            $ui.success("Success!")
+        }
         callback()
     })
 }
@@ -87,7 +113,7 @@ function render() {
                 type: "button",
                 props: {
                     id: "install-button",
-                    title: !getYourVersion() ? "Install" : "Reinstall",
+                    title: !yourVersion() ? "Install" : "Reinstall",
                     font: $font(16)
                 },
                 layout: (make, view) => {
@@ -100,13 +126,16 @@ function render() {
                         sender.hidden = true
                         $ui.alert({
                             title: "Continue",
-                            message: !getYourVersion() ? "About to start installation." : "Are you sure you want to reinstall?",
+                            message: !yourVersion() ? "About to start installation." : "Are you sure you want to reinstall?",
                             actions: [
                                 {
                                     title: "OK",
                                     handler: () => install(() => sender.hidden = false)
                                 },
-                                { title: "Cancel" }
+                                {
+                                    title: "Cancel",
+                                    handler: () => sender.hidden = false
+                                }
                             ]
                         })
                     }

@@ -1,9 +1,13 @@
-const fs = require("fs")
-const path = require("path")
-const UglifyJS = require("uglify-js")
-
-const rootPath = $context.query.path
-const savePath = $context.query.savePath
+try {
+    var fs = require("fs")
+    var path = require("path")
+    var UglifyJS = require("uglify-js")
+} catch (error) {
+    $jsbox.notify("buildProject", { error })
+    throw error
+}
+var rootPath = $context.query.path
+var savePath = $context.query.savePath
 
 try { fs.unlinkSync(savePath) } catch (error) { }
 
@@ -54,17 +58,24 @@ function mkdirsSync(dirname) {
 }
 
 function build() {
-    getProjectStructure(rootPath).forEach(dir => {
+    const projectStructure = getProjectStructure(rootPath)
+    projectStructure.forEach(dir => {
         Object.keys(dir.files).forEach(fileName => {
             const filePath = path.join(savePath, dir.path)
             mkdirsSync(filePath)
             fs.writeFileSync(path.join(filePath, fileName), dir.files[fileName])
         })
     })
+    return projectStructure.map(dir => {
+        return dir.path
+    })
 }
 
 message("Build start.")
-let error
-try { build() } catch (e) { error = e }
-$jsbox.notify("buildProject", { error })
-message("Build done.")
+try {
+    $jsbox.notify("buildProject", { structure: build() })
+    message("Build done.")
+} catch (error) {
+    $jsbox.notify("buildProject", { error })
+    throw error
+}
