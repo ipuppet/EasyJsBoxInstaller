@@ -3,22 +3,20 @@ try {
     var path = require("path")
     var UglifyJS = require("uglify-js")
 } catch (error) {
-    $jsbox.notify("buildProject", { error })
+    $jsbox.notify("error", { error })
     throw error
 }
 var rootPath = $context.query.path
 var savePath = $context.query.savePath
+var count = 0 // 记录文件数量
+var buildedCount = 0 // 记录已处理的文件数量
 
 try { fs.unlinkSync(savePath) } catch (error) { }
-
-function message(msg) {
-    console.log(msg)
-}
 
 function getProjectStructure(pathNow, projectStructure = []) {
     // 忽略 node_modules
     if (pathNow.indexOf("node_modules") > 0) return
-    const files = {}
+    const files = []
     const fileList = fs.readdirSync(pathNow)
     const shortPath = pathNow.replace(rootPath, "")
     fileList.forEach(item => {
@@ -27,15 +25,9 @@ function getProjectStructure(pathNow, projectStructure = []) {
         if (fs.lstatSync(itemPath).isDirectory()) {
             getProjectStructure(itemPath, projectStructure)
         } else {
-            if (itemPath.slice(-3) === ".js") {
-                let fileContent = fs.readFileSync(itemPath, "utf-8")
-                const result = UglifyJS.minify(fileContent)
-                if (result.error) throw result.error
-                fileContent = result.code
-                message(`File: ${shortItemPath}`)
-                files[item] = fileContent
-            } else if (itemPath.indexOf("LICENSE") > -1) {
-                files[item] = fs.readFileSync(itemPath, "utf-8")
+            if (itemPath.slice(-3) === ".js" || itemPath === "LICENSE") {
+                files.push(item)
+                count++
             }
         }
     })
@@ -60,22 +52,30 @@ function mkdirsSync(dirname) {
 function build() {
     const projectStructure = getProjectStructure(rootPath)
     projectStructure.forEach(dir => {
-        Object.keys(dir.files).forEach(fileName => {
+        dir.files.forEach(fileName => {
             const filePath = path.join(savePath, dir.path)
             mkdirsSync(filePath)
-            fs.writeFileSync(path.join(filePath, fileName), dir.files[fileName])
+            const fileContent = fs.readFileSync(path.join(rootPath, dir.path, fileName), "utf-8")
+            const result = UglifyJS.minify(fileContent)
+            if (result.error) throw result.error
+            fs.writeFileSync(path.join(filePath, fileName), result.code)
+            buildedCount++
+            $jsbox.notify("progress", {
+                progress: buildedCount / count,
+                path: dir.path,
+                name: fileName
+            })
         })
     })
-    return projectStructure.map(dir => {
+    // 项目目录结构
+    fs.writeFile(path.join(savePath, "structure.json"), JSON.stringify(projectStructure.map(dir => {
         return dir.path
-    })
+    })), err => { if (err) throw err })
 }
-
-message("Build start.")
 try {
-    $jsbox.notify("buildProject", { structure: build() })
-    message("Build done.")
+    build()
+    $jsbox.notify("buildDone")
 } catch (error) {
-    $jsbox.notify("buildProject", { error })
+    $jsbox.notify("error", { error })
     throw error
 }

@@ -10,7 +10,21 @@ function getVersionText() {
     return `Your Version: ${yourVersion()}\nEasyJsBox Version: ${VERSION}\nInstaller Version: ${INSTALLER_VERSION}`
 }
 
-function build(callback) {
+/**
+ * 切换显示按钮和进度条
+ * @param {Boolean} status true 显示按钮
+ */
+function progressSwitch(status) {
+    $("install-button").hidden = !status
+    $("progress").hidden = status
+}
+
+function progressController(value) {
+    $("progress").value = value
+}
+
+function install() {
+    // 压缩源码
     $nodejs.run({
         path: "/scripts/builder.js",
         query: {
@@ -18,59 +32,45 @@ function build(callback) {
             savePath: $file.absolutePath(BUILD_PATH)
         },
         listener: {
-            id: "buildProject",
-            handler: result => {
-                try {
-                    callback(result)
-                } catch (error) {
-                    console.error(error)
-                }
+            id: "buildDone",
+            handler: () => {
+                $file.delete(SHARED_PATH)
+                $file.copy({
+                    src: BUILD_PATH,
+                    dst: SHARED_PATH
+                })
+                $("version-text").text = getVersionText()
+                $("install-button").title = "Reinstall"
+                $ui.success("Success!")
+                progressSwitch(true)
             }
         }
     })
-}
-
-function install(callback) {
-    // 压缩源码
-    build(result => {
-        if (result.error) {
-            if (result.error) {
-                if (result.error.code === "MODULE_NOT_FOUND") {
-                    $ui.alert({
-                        title: "Error",
-                        message: "Please resolve nodejs dependencies.",
-                        actions: [
-                            {
-                                title: "How?",
-                                handler: () => {
-                                    $app.openURL("https://blog.ipuppet.top/detail/41/")
-                                }
-                            },
-                            { title: "Ok" }
-                        ]
-                    })
-                } else {
-                    console.error(result.error)
-                    $ui.error("Error! See console.")
-                }
-            }
-        } else {
-            $file.delete(SHARED_PATH)
-            $file.copy({
-                src: BUILD_PATH,
-                dst: SHARED_PATH
+    // 监听错误
+    $nodejs.listen("error", result => {
+        $ui.error("Error! See the console for details.")
+        console.error(result.error)
+        progressSwitch(true)
+        // 提示解决模块依赖
+        if (result.error.code === "MODULE_NOT_FOUND") {
+            $ui.alert({
+                title: "Error",
+                message: "Please resolve nodejs dependencies.",
+                actions: [
+                    {
+                        title: "How?",
+                        handler: () => {
+                            $app.openURL("https://blog.ipuppet.top/detail/41/")
+                        }
+                    },
+                    { title: "Ok" }
+                ]
             })
-            // 项目目录结构
-            $file.write({
-                data: $data({ string: JSON.stringify(result.structure) }),
-                path: `${SHARED_PATH}/structure.json`
-            })
-            console.log(result.structure)
-            $("version-text").text = getVersionText()
-            $("install-button").title = "Reinstall"
-            $ui.success("Success!")
         }
-        callback()
+    })
+    // 监听过程
+    $nodejs.listen("progress", result => {
+        progressController(result.progress)
     })
 }
 
@@ -101,11 +101,15 @@ function render() {
                 },
             },
             {
-                type: "spinner",
+                type: "progress",
                 props: {
-                    loading: true
+                    id: "progress",
+                    hidden: true,
+                    value: 0
                 },
                 layout: (make, view) => {
+                    make.left.right.inset(20)
+                    make.height.equalTo(5)
                     make.center.equalTo(view.super)
                 }
             },
@@ -122,19 +126,21 @@ function render() {
                     make.center.equalTo(view.super)
                 },
                 events: {
-                    tapped: sender => {
-                        sender.hidden = true
+                    tapped: () => {
                         $ui.alert({
                             title: "Continue",
                             message: !yourVersion() ? "About to start installation." : "Are you sure you want to reinstall?",
                             actions: [
                                 {
                                     title: "OK",
-                                    handler: () => install(() => sender.hidden = false)
+                                    handler: () => {
+                                        install()
+                                        progressSwitch(false)
+                                    }
                                 },
                                 {
                                     title: "Cancel",
-                                    handler: () => sender.hidden = false
+                                    handler: () => progressSwitch(true)
                                 }
                             ]
                         })
