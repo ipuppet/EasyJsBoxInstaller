@@ -1,4 +1,4 @@
-const VERSION = "0.3.3"
+const VERSION = "0.3.4"
 const ROOT_PATH = "/EasyJsBox" // JSBox path, not nodejs
 const SHARED_PATH = "shared://EasyJsBox"
 
@@ -690,7 +690,8 @@ function isOutdated(thisVersion, version) {
 function init() {
     const copyFile = () => {
         // 清除旧文件
-        $file.delete(ROOT_PATH)
+        $file.delete(`${ROOT_PATH}/src/kernel.js`)
+        $file.delete(`${ROOT_PATH}/LICENSE`)
         // 创建结构
         JSON.parse($file.read(`${SHARED_PATH}/structure.json`).string).forEach(dir => {
             $file.mkdir(`${ROOT_PATH}${dir}`)
