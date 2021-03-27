@@ -32,28 +32,7 @@ class View {
         this.dataCenter.set("itemIdPrefix", "menu-item-")
         this.dataCenter.set("id", "menu")
         this.selected = this.dataCenter.get("selectedMenu") // 当前菜单
-        this.menuLayout = { // menu layout
-            menuItem: (make, view) => {
-                make.size.equalTo(50)
-                const length = this.dataCenter.get("menus").length
-                const spacing = (this.getMenuWidth() - length * 50) / (length + 1)
-                if (view.prev) {
-                    make.left.equalTo(view.prev.right).offset(spacing)
-                } else {
-                    make.left.inset(spacing)
-                }
-            },
-            menuBar: (make, view) => {
-                make.centerX.equalTo(view.super)
-                make.width.equalTo(this.getMenuWidth())
-                const isLargeScreen = this.UIKit.isLargeScreen()
-                make.top.equalTo(view.super.safeAreaBottom).offset(-50)
-                make.bottom.equalTo(view.super)
-                $("menu").cornerRadius = isLargeScreen ? 10 : 0
-                if ($(`${this.dataCenter.get("itemIdPrefix")}canvas`))
-                    $(`${this.dataCenter.get("itemIdPrefix")}canvas`).hidden = isLargeScreen
-            }
-        }
+        this.maxWidth = 500
     }
 
     /**
@@ -66,7 +45,12 @@ class View {
     }
 
     getMenuWidth() {
-        return this.UIKit.isLargeScreen() ? 500 : $device.info.screen.width
+        const windowWidth = this.UIKit.getWindowSize().width
+        return windowWidth > this.maxWidth ? this.maxWidth : windowWidth
+    }
+
+    isLargeScreen() {
+        return this.getMenuWidth() >= this.maxWidth
     }
 
     /**
@@ -141,7 +125,16 @@ class View {
                         }
                     }
                 ],
-                layout: this.menuLayout.menuItem,
+                layout: (make, view) => {
+                    make.size.equalTo(50)
+                    const length = this.dataCenter.get("menus").length
+                    const spacing = (this.getMenuWidth() - length * 50) / (length + 1)
+                    if (view.prev) {
+                        make.left.equalTo(view.prev.right).offset(spacing)
+                    } else {
+                        make.left.inset(spacing)
+                    }
+                },
                 events: {
                     tapped: sender => {
                         if (this.selected === sender.info.index) return
@@ -177,14 +170,23 @@ class View {
     getView() {
         return {
             type: "view",
-            layout: this.menuLayout.menuBar,
+            props: { id: "easyjsbox-menu" },
+            layout: (make, view) => {
+                const isLargeScreen = this.isLargeScreen()
+                make.centerX.equalTo(view.super)
+                make.width.equalTo(isLargeScreen ? this.maxWidth : view.super)
+                make.top.equalTo(view.super.safeAreaBottom).offset(-50)
+                make.bottom.equalTo(view.super)
+                //$(this.dataCenter.get("id")).cornerRadius = isLargeScreen ? 10 : 0
+                $(`${this.dataCenter.get("itemIdPrefix")}canvas`).hidden = isLargeScreen
+            },
             views: [
                 {
                     type: "blur",
                     props: {
                         id: this.dataCenter.get("id"),
                         style: this.UIKit.blurStyle,
-                        cornerRadius: this.UIKit.isLargeScreen() ? 10 : 0
+                        cornerRadius: this.isLargeScreen() ? 10 : 0
                     },
                     layout: $layout.fill,
                     views: this.menuItemTemplate()
@@ -193,7 +195,7 @@ class View {
                     type: "canvas",
                     props: {
                         id: `${this.dataCenter.get("itemIdPrefix")}canvas`,
-                        hidden: this.UIKit.isLargeScreen()
+                        hidden: this.isLargeScreen()
                     },
                     layout: (make, view) => {
                         make.top.equalTo(view.prev.top)

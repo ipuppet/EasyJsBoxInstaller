@@ -1,4 +1,4 @@
-const VERSION = "0.3.2"
+const VERSION = "0.3.3"
 const ROOT_PATH = "/EasyJsBox" // JSBox path, not nodejs
 const SHARED_PATH = "shared://EasyJsBox"
 
@@ -24,10 +24,26 @@ class UIKit {
     }
 
     /**
+     * 获取Window大小
+     * @returns 
+     */
+    getWindowSize() {
+        return $objc("UIWindow").$keyWindow().jsValue().size
+    }
+
+    /**
      * 是否属于大屏设备
      */
     isLargeScreen() {
-        return $device.info.screen.width > 500
+        return $device.isIpad || $device.isIpadPro
+    }
+
+    /**
+     * 判断是否是分屏模式
+     * @returns {Boolean}
+     */
+    isSplitScreenMode() {
+        return $device.info.screen.width !== this.getWindowSize().width
     }
 
     /**
@@ -666,6 +682,7 @@ class Kernel {
  * @returns 过期则返回 true
  */
 function isOutdated(thisVersion, version) {
+    if (version.indexOf("dev") > -1) return true
     // TODO 检查版本号
     return thisVersion !== version
 }
