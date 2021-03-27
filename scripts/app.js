@@ -74,6 +74,10 @@ function install() {
     })
 }
 
+function checkUpdateFromGithub(){
+    // TODO checkUpdateFromGithub
+}
+
 function render() {
     $ui.render({
         type: "view",
