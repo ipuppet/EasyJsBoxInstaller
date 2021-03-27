@@ -21,11 +21,10 @@ function getProjectStructure(pathNow, projectStructure = []) {
     const shortPath = pathNow.replace(rootPath, "")
     fileList.forEach(item => {
         const itemPath = path.join(pathNow, item)
-        const shortItemPath = itemPath.replace(rootPath, "")
         if (fs.lstatSync(itemPath).isDirectory()) {
             getProjectStructure(itemPath, projectStructure)
         } else {
-            if (itemPath.slice(-3) === ".js" || itemPath === "LICENSE") {
+            if (itemPath.slice(-3) === ".js" || itemPath.indexOf("LICENSE") > -1) {
                 files.push(item)
                 count++
             }
@@ -56,9 +55,13 @@ function build() {
             const filePath = path.join(savePath, dir.path)
             mkdirsSync(filePath)
             const fileContent = fs.readFileSync(path.join(rootPath, dir.path, fileName), "utf-8")
-            const result = UglifyJS.minify(fileContent)
-            if (result.error) throw result.error
-            fs.writeFileSync(path.join(filePath, fileName), result.code)
+            if (fileName.slice(-3) === ".js") {
+                const result = UglifyJS.minify(fileContent)
+                if (result.error) throw result.error
+                fs.writeFileSync(path.join(filePath, fileName), result.code)
+            } else {
+                fs.writeFileSync(path.join(filePath, fileName), fileContent)
+            }
             buildedCount++
             $jsbox.notify("progress", {
                 progress: buildedCount / count,
