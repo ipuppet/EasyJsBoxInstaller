@@ -52,7 +52,7 @@ function build() {
     const projectStructure = getProjectStructure(rootPath)
     const dirStructure = []
     projectStructure.forEach(dir => {
-        dirStructure.push(dir)
+        dirStructure.push(dir.path)
         dir.files.forEach(fileName => {
             const filePath = path.join(savePath, dir.path)
             mkdirsSync(filePath)
