@@ -71,9 +71,9 @@ function build() {
         })
     })
     // 项目目录结构
-    fs.writeFile(path.join(savePath, "structure.json"), JSON.stringify(projectStructure.map(dir => {
+    fs.writeFileSync(path.join(savePath, "structure.json"), JSON.stringify(projectStructure.map(dir => {
         return dir.path
-    })), err => { if (err) throw err })
+    })))
 }
 try {
     build()

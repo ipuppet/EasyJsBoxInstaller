@@ -1,4 +1,4 @@
-const VERSION = "0.3.4"
+const VERSION = "0.3.5"
 const ROOT_PATH = "/EasyJsBox" // JSBox path, not nodejs
 const SHARED_PATH = "shared://EasyJsBox"
 
