@@ -50,7 +50,9 @@ function mkdirsSync(dirname) {
 
 function build() {
     const projectStructure = getProjectStructure(rootPath)
+    const dirStructure = []
     projectStructure.forEach(dir => {
+        dirStructure.push(dir)
         dir.files.forEach(fileName => {
             const filePath = path.join(savePath, dir.path)
             mkdirsSync(filePath)
@@ -71,9 +73,7 @@ function build() {
         })
     })
     // 项目目录结构
-    fs.writeFileSync(path.join(savePath, "structure.json"), JSON.stringify(projectStructure.map(dir => {
-        return dir.path
-    })))
+    fs.writeFileSync(path.join(savePath, "structure.json"), JSON.stringify(dirStructure))
 }
 try {
     build()
