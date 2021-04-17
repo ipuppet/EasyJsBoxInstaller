@@ -999,7 +999,10 @@ class View {
                     this.UIKit.push({
                         title: title,
                         topOffset: false,
-                        views: this.defaultList({}, {}, this.getSections(children), {}, true)
+                        views: this.defaultList({
+                            tupe: "view",
+                            props: { height: 60 }
+                        }, {}, this.getSections(children), {}, true)
                     })
                 }
             }
