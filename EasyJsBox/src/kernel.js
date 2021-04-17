@@ -715,7 +715,7 @@ function isOutdated(thisVersion, version) {
 }
 
 function init() {
-    const copyFile = () => {
+    const update = () => {
         // 清除旧文件
         $file.delete(`${ROOT_PATH}/src/kernel.js`)
         $file.delete(`${ROOT_PATH}/LICENSE`)
@@ -739,11 +739,11 @@ function init() {
         if ($file.exists(SHARED_PATH) && $app.env !== $env.widget) {
             const SHARED_VERSION = eval($file.read(`${SHARED_PATH}/src/kernel.js`).string).VERSION
             if (isOutdated(VERSION, SHARED_VERSION)) {
-                copyFile()
+                update()
             }
         }
     } else {
-        copyFile()
+        update()
     }
 }
 
