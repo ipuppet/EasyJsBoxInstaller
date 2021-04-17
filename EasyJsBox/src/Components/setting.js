@@ -96,15 +96,23 @@ class Controller {
         if ($file.exists(this.args.savePath)) {
             user = JSON.parse($file.read(this.args.savePath).string)
         }
-        for (let section of this.structure) {
-            for (let item of section.items) {
-                if (exclude.indexOf(item.type) < 0) {
-                    this.setting[item.key] = item.key in user ? user[item.key] : item.value
-                } else { // 被排除的项目直接赋值
-                    this.setting[item.key] = item.value
+        function setValue(structure) {
+            const setting = {}
+            for (let section of structure) {
+                for (let item of section.items) {
+                    if (item.type === "child") {
+                        const child = setValue(item.children)
+                        Object.assign(setting, child)
+                    } else if (exclude.indexOf(item.type) < 0) {
+                        setting[item.key] = item.key in user ? user[item.key] : item.value
+                    } else { // 被排除的项目直接赋值
+                        setting[item.key] = item.value
+                    }
                 }
             }
+            return setting
         }
+        this.setting = setValue(this.structure)
     }
 
     /**
