@@ -7,6 +7,7 @@ const kernel = new Kernel()
 
 function yourVersion() {
     const content = $file.read(`${SHARED_PATH}/src/kernel.js`)?.string
+    if (!content) return ""
     const firstIndex = content.indexOf("\"")
     const lastIndex = content.indexOf("\"", 18)
     return content.slice(firstIndex + 1, lastIndex)
@@ -89,7 +90,7 @@ function checkUpdate() {
             const path = `${EASYJSBOX_SRC_PATH_JSBOX}/${dir}/${file}`
             if ($file.isDirectory(path) || file.slice(file.lastIndexOf(".")) !== ".js") return
             const { VERSION } = require(`${EASYJSBOX_SRC_PATH_NODEJS}/${dir}/${file}`)
-            const SHARED_VERSION = eval($file.read(`${SHARED_PATH}/src/${dir}/${file}`).string).VERSION
+            const SHARED_VERSION = eval($file.read(`${SHARED_PATH}/src/${dir}/${file}`)?.string)?.VERSION
             if (isOutdated(SHARED_VERSION, VERSION)) {
                 needUpdate = true
                 files.push({
