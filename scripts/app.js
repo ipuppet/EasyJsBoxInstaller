@@ -1,13 +1,15 @@
-const { VERSION, SHARED_PATH } = require("../EasyJsBox/src/kernel")
+const EASYJSBOX_SRC_PATH_JSBOX = "/EasyJsBox/src"
+const EASYJSBOX_SRC_PATH_NODEJS = "../EasyJsBox/src"
+const { SHARED_PATH, isOutdated, Kernel } = require(`${EASYJSBOX_SRC_PATH_NODEJS}/kernel`)
 const BUILD_PATH = "/assets/build"
 const INSTALLER_VERSION = JSON.parse($file.read("/config.json").string).info.version
+const kernel = new Kernel()
 
 function yourVersion() {
-    return eval($file.read(`${SHARED_PATH}/src/kernel.js`)?.string)?.VERSION
-}
-
-function getVersionText() {
-    return `Your Version: ${yourVersion()}\nEasyJsBox Version: ${VERSION}\nInstaller Version: ${INSTALLER_VERSION}`
+    const content = $file.read(`${SHARED_PATH}/src/kernel.js`)?.string
+    const firstIndex = content.indexOf("\"")
+    const lastIndex = content.indexOf("\"", 18)
+    return content.slice(firstIndex + 1, lastIndex)
 }
 
 /**
@@ -24,6 +26,8 @@ function progressController(value) {
 }
 
 function install() {
+    progressSwitch(false)
+    progressController(0)
     // 压缩源码
     $nodejs.run({
         path: "/scripts/builder.js",
@@ -39,7 +43,6 @@ function install() {
                     src: BUILD_PATH,
                     dst: SHARED_PATH
                 })
-                $("version-text").text = getVersionText()
                 $("install-button").title = "Reinstall"
                 $ui.success("Success!")
                 progressSwitch(true)
@@ -74,8 +77,113 @@ function install() {
     })
 }
 
-function checkUpdateFromGithub(){
+function checkUpdateFromGithub() {
     // TODO checkUpdateFromGithub
+}
+
+function checkUpdate() {
+    let needUpdate = false
+    const checkFiles = dir => {
+        const files = []
+        $file.list(`${EASYJSBOX_SRC_PATH_JSBOX}/${dir}`).forEach(file => {
+            const path = `${EASYJSBOX_SRC_PATH_JSBOX}/${dir}/${file}`
+            if ($file.isDirectory(path) || file.slice(file.lastIndexOf(".")) !== ".js") return
+            const { VERSION } = require(`${EASYJSBOX_SRC_PATH_NODEJS}/${dir}/${file}`)
+            const SHARED_VERSION = eval($file.read(`${SHARED_PATH}/src/${dir}/${file}`).string).VERSION
+            if (isOutdated(SHARED_VERSION, VERSION)) {
+                needUpdate = true
+                files.push({
+                    name: file,
+                    versionThis: SHARED_VERSION,
+                    versionNew: VERSION
+                })
+            } else {
+                files.push({
+                    name: file,
+                    versionThis: SHARED_VERSION
+                })
+            }
+        })
+        return files
+    }
+    const toListData = data => {
+        return data.map(item => {
+            return {
+                name: { text: item.name },
+                version: {
+                    text: item.versionNew ? `${item.versionThis} -> ${item.versionNew}` : item.versionThis
+                }
+            }
+        })
+    }
+    const kernelData = toListData(checkFiles(""))
+    const components = toListData(checkFiles("Components"))
+    const plugins = toListData(checkFiles("Plugins"))
+    const offset = 15
+    kernel.UIKit.pushPageSheet({
+        title: "Check for updates",
+        doneText: needUpdate ? "Update" : "Done",
+        done: needUpdate ? () => {
+            setTimeout(() => install(), 500)
+        } : undefined,
+        views: [{
+            type: "list",
+            layout: $layout.fill,
+            props: {
+                header: needUpdate ? {} : {
+                    type: "view",
+                    props: { height: 50 },
+                    views: [{
+                        type: "label",
+                        layout: make => {
+                            make.left.inset(offset)
+                            make.top.inset(20)
+                        },
+                        props: {
+                            height: 50,
+                            text: "Everything is up to date!"
+                        }
+                    }]
+                },
+                data: [
+                    {
+                        title: "Kernel",
+                        rows: kernelData
+                    },
+                    {
+                        title: "Components",
+                        rows: components
+                    },
+                    {
+                        title: "Plugins",
+                        rows: plugins
+                    }
+                ],
+                template: [
+                    {
+                        type: "label",
+                        props: {
+                            id: "name"
+                        },
+                        layout: (make, view) => {
+                            make.centerY.equalTo(view.super)
+                            make.left.inset(offset)
+                        }
+                    },
+                    {
+                        type: "label",
+                        props: {
+                            id: "version"
+                        },
+                        layout: (make, view) => {
+                            make.centerY.equalTo(view.super)
+                            make.right.inset(offset)
+                        }
+                    }
+                ]
+            }
+        }]
+    })
 }
 
 function render() {
@@ -83,6 +191,10 @@ function render() {
         type: "view",
         props: {
             navButtons: [
+                {
+                    symbol: "arrow.2.circlepath",
+                    handler: () => checkUpdate()
+                },
                 {
                     image: $image("/assets/icon/github.png"),
                     handler: () => $app.openURL("https://github.com/ipuppet/EasyJsBoxInstaller")
@@ -139,7 +251,6 @@ function render() {
                                     title: "OK",
                                     handler: () => {
                                         install()
-                                        progressSwitch(false)
                                     }
                                 },
                                 {
@@ -155,14 +266,14 @@ function render() {
                 type: "label",
                 props: {
                     id: "version-text",
-                    text: getVersionText(),
+                    text: `Installer Version: ${INSTALLER_VERSION}`,
                     font: $font(12),
                     lines: 0,
                     align: $align.center
                 },
                 layout: (make, view) => {
                     make.width.equalTo(view.super)
-                    make.bottom.inset(20)
+                    make.bottom.equalTo(view.super.safeArea).offset(-30)
                 },
             }
         ]
