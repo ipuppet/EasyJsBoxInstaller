@@ -1,4 +1,4 @@
-const VERSION = "0.3.6"
+const VERSION = "0.3.6.1"
 const ROOT_PATH = "/EasyJsBox" // JSBox path, not nodejs
 const SHARED_PATH = "shared://EasyJsBox"
 
@@ -48,16 +48,15 @@ class UIKit {
 
     /**
      * 页面标题
-     * @param {*} id 标题id
-     * @param {*} title 标题文本
+     * @param {String} id 标题id
+     * @param {String} title 标题文本
+     * @param {Number} height 高度
      */
-    headerTitle(id, title) {
+    headerTitle(id, title, height = 90) {
         return {
             type: "view",
             info: { id: id, title: title }, // 供动画使用
-            props: {
-                height: 90
-            },
+            props: { height: height },
             views: [{
                 type: "label",
                 props: {
@@ -747,4 +746,4 @@ function init() {
     }
 }
 
-module.exports = { Kernel, VERSION, SHARED_PATH, init }
+module.exports = { Kernel, VERSION, SHARED_PATH, init, isOutdated }
