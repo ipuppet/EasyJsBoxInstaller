@@ -130,7 +130,7 @@ function checkUpdate() {
             type: "list",
             layout: $layout.fill,
             props: {
-                header: needUpdate ? {} : {
+                header: {
                     type: "view",
                     props: { height: 50 },
                     views: [{
@@ -141,7 +141,7 @@ function checkUpdate() {
                         },
                         props: {
                             height: 50,
-                            text: "Everything is up to date!"
+                            text: needUpdate ? "Needs to be updated" : "Everything is up to date!"
                         }
                     }]
                 },
