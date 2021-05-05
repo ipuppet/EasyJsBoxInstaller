@@ -277,7 +277,8 @@ function render() {
                     make.bottom.equalTo(view.super.safeArea).offset(-30)
                 },
             }
-        ]
+        ],
+        events: { appeared: () => checkUpdate() }
     })
 }
 
