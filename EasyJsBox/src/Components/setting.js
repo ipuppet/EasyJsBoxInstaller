@@ -2,10 +2,17 @@ class Controller {
     constructor(data) {
         Object.assign(this, data)
         this.args.savePath = this.args.savePath ?? (() => {
-            if (!$file.exists("/temp")) {
-                $file.mkdir("/temp")
+            if (!$file.exists("/storage")) {
+                $file.mkdir("/storage")
             }
-            return "/temp/setting.json"
+            // TODO 兼容旧数据，于未来删除
+            if($file.exists("/assets/setting.json")){
+                $file.move({
+                    src: "/assets/setting.json",
+                    dst: "/storage/setting.json"
+                })
+            }
+            return "/storage/setting.json"
         })()
         this._setName(this.args.name ?? this.args.savePath.replace("/", "-"))
         if (this.args.structure) {
