@@ -131,8 +131,11 @@ class Controller {
         this.dataCenter.set("footer", footer)
     }
 
-    get(key) {
-        return this.setting[key]
+    get(key, _default = null) {
+        if (Object.prototype.hasOwnProperty.call(this.setting, key))
+            return this.setting[key]
+        else
+            return _default
     }
 
     getColor(color) {
@@ -1286,4 +1289,4 @@ class View {
     }
 }
 
-module.exports = { Controller, View, VERSION: "1.0.4" }
+module.exports = { Controller, View, VERSION: "1.0.5" }
