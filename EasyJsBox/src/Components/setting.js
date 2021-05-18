@@ -1,7 +1,12 @@
 class Controller {
     constructor(data) {
         Object.assign(this, data)
-        this.args.savePath = this.args.savePath ?? "/assets/setting.json"
+        this.args.savePath = this.args.savePath ?? (() => {
+            if (!$file.exists("/temp")) {
+                $file.mkdir("/temp")
+            }
+            return "/temp/setting.json"
+        })()
         this._setName(this.args.name ?? this.args.savePath.replace("/", "-"))
         if (this.args.structure) {
             this.structure = this.args.structure
@@ -1289,4 +1294,4 @@ class View {
     }
 }
 
-module.exports = { Controller, View, VERSION: "1.0.5" }
+module.exports = { Controller, View, VERSION: "1.0.5.dev" }
