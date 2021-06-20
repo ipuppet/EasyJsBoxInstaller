@@ -1,4 +1,4 @@
-const VERSION = "0.3.8"
+const VERSION = "0.3.9"
 const ROOT_PATH = "/EasyJsBox" // JSBox path, not nodejs
 const SHARED_PATH = "shared://EasyJsBox"
 
@@ -11,6 +11,26 @@ class UIKit {
         this.linkColor = $color("systemLink")
         // 本地化
         this.loadL10n()
+        this.isLargeTitle = true
+    }
+
+    disableLargeTitle() {
+        this.isLargeTitle = false
+    }
+
+    setTitle(title) {
+        $ui.title = title
+    }
+
+    toNavButton(navButtons) {
+        return navButtons.map(item => {
+            return {
+                symbol: item.views[0].props.symbol,
+                handler: sender => {
+                    item.views[0].events.tapped(sender)
+                }
+            }
+        })
     }
 
     loadL10n() {
@@ -203,16 +223,17 @@ class UIKit {
     push(args) {
         const navTop = 45,
             views = args.views,
-            title = args.title ?? "",
+            title = args.title ?? (this.isLargeTitle ? "" : this.kernel.name),
             parent = args.parent ?? $l10n("BACK"),
             navButtons = args.navButtons ?? [],
-            topOffset = args.topOffset ?? true,
+            topOffset = !this.isLargeTitle ? false : args.topOffset ?? true,
             bgcolor = args.bgcolor ?? "primarySurface",
             disappeared = args.disappeared
         $ui.push({
             props: {
-                navBarHidden: true,
-                statusBarStyle: 0,
+                navButtons: this.toNavButton(navButtons),
+                title: title,
+                navBarHidden: this.isLargeTitle,
                 bgcolor: $color(bgcolor),
             },
             events: {
@@ -233,6 +254,7 @@ class UIKit {
                 },
                 {
                     type: "view",
+                    props: { hidden: !this.isLargeTitle },
                     layout: (make, view) => {
                         make.left.top.right.inset(0)
                         make.bottom.equalTo(view.super.safeAreaTop).offset(navTop)
@@ -679,15 +701,24 @@ class Kernel {
         // 注入页面和菜单
         this.components.page.controller.setPages(pages)
         this.components.menu.controller.setMenus(menus)
-        return () => {
-            $ui.render({
-                type: "view",
-                props: {
+        const props = (() => {
+            if (this.UIKit.isLargeTitle) {
+                return {
                     navBarHidden: true,
                     titleColor: $color("primaryText"),
                     barColor: $color("primarySurface"),
                     statusBarStyle: 0
-                },
+                }
+            } else {
+                return {
+                    titleColor: $color("#FFFFFF")
+                }
+            }
+        })()
+        return () => {
+            $ui.render({
+                type: "view",
+                props: Object.assign({ id: "mainPage" }, props),
                 layout: $layout.fill,
                 views: [
                     this.components.page.view.getView(),

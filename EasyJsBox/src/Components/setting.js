@@ -6,7 +6,7 @@ class Controller {
                 $file.mkdir("/storage")
             }
             // TODO 兼容旧数据，于未来删除
-            if($file.exists("/assets/setting.json")){
+            if ($file.exists("/assets/setting.json")) {
                 $file.move({
                     src: "/assets/setting.json",
                     dst: "/storage/setting.json"
@@ -1175,6 +1175,10 @@ class View {
      */
     defaultList(header, footer, data, events = {}, secondaryPage) {
         if (secondaryPage === undefined) secondaryPage = this.dataCenter.get("secondaryPage")
+        if (!this.UIKit.isLargeTitle) {
+            secondaryPage = true
+            header = {}
+        }
         return [{
             type: "view",
             props: { bgcolor: $color("insetGroupedBackground") },
@@ -1301,4 +1305,4 @@ class View {
     }
 }
 
-module.exports = { Controller, View, VERSION: "1.0.5" }
+module.exports = { Controller, View, VERSION: "1.0.6" }
