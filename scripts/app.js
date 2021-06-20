@@ -1,9 +1,11 @@
-const EASYJSBOX_SRC_PATH_JSBOX = "/EasyJsBox/src"
+const EASYJSBOX_BASE_PATH_JSBOX = "/EasyJsBox"
+const EASYJSBOX_SRC_PATH_JSBOX = `${EASYJSBOX_BASE_PATH_JSBOX}/src`
 const EASYJSBOX_SRC_PATH_NODEJS = "../EasyJsBox/src"
 const { SHARED_PATH, isOutdated, Kernel } = require(`${EASYJSBOX_SRC_PATH_NODEJS}/kernel`)
 const BUILD_PATH = "/assets/build"
 const INSTALLER_VERSION = JSON.parse($file.read("/config.json").string).info.version
 const kernel = new Kernel()
+let useNode = $cache.get("useNode") ?? true
 
 function yourVersion() {
     const content = $file.read(`${SHARED_PATH}/src/kernel.js`)?.string
@@ -29,60 +31,71 @@ function progressController(value) {
 function install() {
     progressSwitch(false)
     progressController(0)
-    // 压缩源码
-    $nodejs.run({
-        path: "/scripts/builder.js",
-        query: {
-            path: $file.absolutePath("EasyJsBox"),
-            savePath: $file.absolutePath(BUILD_PATH)
-        },
-        listener: {
-            id: "buildDone",
-            handler: () => {
-                $file.delete(SHARED_PATH)
-                $file.copy({
-                    src: BUILD_PATH,
-                    dst: SHARED_PATH
-                })
-                $("install-button").title = "Reinstall"
-                $ui.success("Success!")
-                progressSwitch(true)
-            }
-        }
-    })
-    // 监听错误
-    $nodejs.listen("error", result => {
-        $ui.error("Error! See the console for details.")
-        console.error(result.error)
+    const success = () => {
+        $("install-button").title = "Reinstall"
+        $ui.success("Success!")
         progressSwitch(true)
-        // 提示解决模块依赖
-        if (result.error.code === "MODULE_NOT_FOUND") {
-            $ui.alert({
-                title: "Error",
-                message: "Please resolve nodejs dependencies.",
-                actions: [
-                    {
-                        title: "How?",
-                        handler: () => {
-                            $app.openURL("https://blog.ipuppet.top/detail/41/")
-                        }
-                    },
-                    { title: "Ok" }
-                ]
-            })
-        }
-    })
-    // 监听过程
-    $nodejs.listen("progress", result => {
-        progressController(result.progress)
-    })
+    }
+    if (useNode) {
+        // 压缩源码
+        $nodejs.run({
+            path: "/scripts/builder.js",
+            query: {
+                path: $file.absolutePath("EasyJsBox"),
+                savePath: $file.absolutePath(BUILD_PATH)
+            },
+            listener: {
+                id: "buildDone",
+                handler: () => {
+                    $file.delete(SHARED_PATH)
+                    $file.copy({
+                        src: BUILD_PATH,
+                        dst: SHARED_PATH
+                    })
+                    success()
+                }
+            }
+        })
+        // 监听错误
+        $nodejs.listen("error", result => {
+            $ui.error("Error! See the console for details.")
+            console.error(result.error)
+            progressSwitch(true)
+            // 提示解决模块依赖
+            if (result.error.code === "MODULE_NOT_FOUND") {
+                $ui.alert({
+                    title: "Error",
+                    message: "Please resolve nodejs dependencies.",
+                    actions: [
+                        {
+                            title: "How?",
+                            handler: () => {
+                                $app.openURL("https://blog.ipuppet.top/detail/41/")
+                            }
+                        },
+                        { title: "Ok" }
+                    ]
+                })
+            }
+        })
+        // 监听过程
+        $nodejs.listen("progress", result => {
+            progressController(result.progress)
+        })
+    } else {
+        $file.copy({
+            src: EASYJSBOX_BASE_PATH_JSBOX,
+            dst: SHARED_PATH
+        })
+        success()
+    }
 }
 
 function checkUpdateFromGithub() {
     // TODO checkUpdateFromGithub
 }
 
-function checkUpdate() {
+function checkUpdate(manual = true) {
     let needUpdate = false
     const checkFiles = dir => {
         const files = []
@@ -121,70 +134,71 @@ function checkUpdate() {
     const components = toListData(checkFiles("Components"))
     const plugins = toListData(checkFiles("Plugins"))
     const offset = 15
-    kernel.UIKit.pushPageSheet({
-        title: "Check for updates",
-        doneText: needUpdate ? "Update" : "Done",
-        done: needUpdate ? () => {
-            setTimeout(() => install(), 500)
-        } : undefined,
-        views: [{
-            type: "list",
-            layout: $layout.fill,
-            props: {
-                header: {
-                    type: "view",
-                    props: { height: 50 },
-                    views: [{
-                        type: "label",
-                        layout: make => {
-                            make.left.inset(offset)
-                            make.top.inset(20)
-                        },
-                        props: {
-                            height: 50,
-                            text: needUpdate ? "Needs to be updated" : "Everything is up to date!"
-                        }
-                    }]
-                },
-                data: [
-                    {
-                        title: "Kernel",
-                        rows: kernelData
+    if (manual || needUpdate)
+        kernel.UIKit.pushPageSheet({
+            title: "Check for updates",
+            doneText: needUpdate ? "Update" : "Done",
+            done: needUpdate ? () => {
+                setTimeout(() => install(), 500)
+            } : undefined,
+            views: [{
+                type: "list",
+                layout: $layout.fill,
+                props: {
+                    header: {
+                        type: "view",
+                        props: { height: 50 },
+                        views: [{
+                            type: "label",
+                            layout: make => {
+                                make.left.inset(offset)
+                                make.top.inset(20)
+                            },
+                            props: {
+                                height: 50,
+                                text: needUpdate ? "Needs to be updated" : "Everything is up to date!"
+                            }
+                        }]
                     },
-                    {
-                        title: "Components",
-                        rows: components
-                    },
-                    {
-                        title: "Plugins",
-                        rows: plugins
-                    }
-                ],
-                template: [
-                    {
-                        type: "label",
-                        props: {
-                            id: "name"
+                    data: [
+                        {
+                            title: "Kernel",
+                            rows: kernelData
                         },
-                        layout: (make, view) => {
-                            make.centerY.equalTo(view.super)
-                            make.left.inset(offset)
-                        }
-                    },
-                    {
-                        type: "label",
-                        props: {
-                            id: "version"
+                        {
+                            title: "Components",
+                            rows: components
                         },
-                        layout: (make, view) => {
-                            make.centerY.equalTo(view.super)
-                            make.right.inset(offset)
+                        {
+                            title: "Plugins",
+                            rows: plugins
                         }
-                    }
-                ]
-            }
-        }]
-    })
+                    ],
+                    template: [
+                        {
+                            type: "label",
+                            props: {
+                                id: "name"
+                            },
+                            layout: (make, view) => {
+                                make.centerY.equalTo(view.super)
+                                make.left.inset(offset)
+                            }
+                        },
+                        {
+                            type: "label",
+                            props: {
+                                id: "version"
+                            },
+                            layout: (make, view) => {
+                                make.centerY.equalTo(view.super)
+                                make.right.inset(offset)
+                            }
+                        }
+                    ]
+                }
+            }]
+        })
 }
 
 function render() {
@@ -276,9 +290,34 @@ function render() {
                     make.width.equalTo(view.super)
                     make.bottom.equalTo(view.super.safeArea).offset(-30)
                 },
+            },
+            {
+                type: "label",
+                props: {
+                    text: "Use Node.js",
+                    align: $align.left
+                },
+                layout: function (make, view) {
+                    make.top.equalTo(view.super)
+                }
+            },
+            {
+                type: "switch",
+                props: {
+                    on: useNode
+                },
+                layout: (make, view) => {
+                    make.top.equalTo(view.prev.bottom)
+                },
+                events: {
+                    changed: sender => {
+                        useNode = sender.on
+                        $cache.set("useNode", sender.on)
+                    }
+                }
             }
         ],
-        events: { appeared: () => checkUpdate() }
+        events: { appeared: () => checkUpdate(false) }
     })
 }
 
