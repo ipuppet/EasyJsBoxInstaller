@@ -87,6 +87,15 @@ function install() {
             src: EASYJSBOX_BASE_PATH_JSBOX,
             dst: SHARED_PATH
         })
+        $file.write({
+            data: $data({ string: JSON.stringify([
+                "",
+                "/src",
+                "/src/Plugins",
+                "/src/Components"
+            ]) }),
+            path: `${SHARED_PATH}/structure.json`
+        })
         success()
     }
 }
