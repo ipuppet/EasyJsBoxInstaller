@@ -88,12 +88,14 @@ function install() {
             dst: SHARED_PATH
         })
         $file.write({
-            data: $data({ string: JSON.stringify([
-                "",
-                "/src",
-                "/src/Plugins",
-                "/src/Components"
-            ]) }),
+            data: $data({
+                string: JSON.stringify([
+                    "",
+                    "/src",
+                    "/src/Plugins",
+                    "/src/Components"
+                ])
+            }),
             path: `${SHARED_PATH}/structure.json`
         })
         success()
