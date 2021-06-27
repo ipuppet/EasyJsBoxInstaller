@@ -1,4 +1,4 @@
-const VERSION = "0.3.9"
+const VERSION = "0.3.10"
 const ROOT_PATH = "/EasyJsBox" // JSBox path, not nodejs
 const SHARED_PATH = "shared://EasyJsBox"
 
@@ -20,17 +20,34 @@ class UIKit {
 
     setTitle(title) {
         $ui.title = title
+        this.title = title
     }
 
-    toNavButton(navButtons) {
-        return navButtons.map(item => {
-            return {
-                symbol: item.views[0].props.symbol,
-                handler: sender => {
-                    item.views[0].events.tapped(sender)
-                }
+    isUIKitNavButton(button) {
+        if (button?.props?.id) {
+            return true
+        }
+        return false
+    }
+
+    setNavButtons(buttons) {
+        this.navButtons = []
+        buttons.forEach(button => {
+            if (this.isUIKitNavButton(button)) {
+                this.navButtons.push(this.toJSBoxNavButton(button))
+            } else {
+                this.navButtons.push(button)
             }
         })
+    }
+
+    toJSBoxNavButton(button) {
+        return {
+            symbol: button.views[0].props.symbol,
+            handler: sender => {
+                button.views[0].events.tapped(sender)
+            }
+        }
     }
 
     loadL10n() {
@@ -93,6 +110,137 @@ class UIKit {
                 }
             }]
         }
+    }
+
+    /**
+     * 标准列表视图
+     * @param {Object} header 该对象中需要包含一个标题label的id和title (info: { id: id, title: title }) 供动画使用
+     * @param {*} footer 视图对象
+     * @param {*} data
+     * @param {*} events
+     */
+    defaultList(header, footer, data, events = {}, largeTitle) {
+        return [{
+            type: "view",
+            views: [{
+                type: "view",
+                layout: (make, view) => {
+                    make.top.left.right.equalTo(view.super.safeArea)
+                    make.bottom.inset(0)
+                },
+                views: [{
+                    type: "list",
+                    props: Object.assign({
+                        style: 2,
+                        separatorInset: $insets(0, 50, 0, 10), // 分割线边距
+                        rowHeight: 50,
+                        indicatorInsets: $insets(50, 0, largeTitle ? 50 : 0, 0),
+                        footer: footer,
+                        data: data
+                    }, largeTitle ? header : {}),
+                    events: Object.assign(largeTitle ? {
+                        didScroll: sender => {
+                            // 下拉放大字体
+                            if (sender.contentOffset.y <= this.topOffset) {
+                                let size = 35 - sender.contentOffset.y * 0.04
+                                if (size > this.titleSizeMax)
+                                    size = this.titleSizeMax
+                                $(header.info.id).font = $font("bold", size)
+                            }
+                            // 顶部信息栏
+                            if (sender.contentOffset.y >= 5) {
+                                $ui.animate({
+                                    duration: 0.2,
+                                    animation: () => {
+                                        $(header.info.id + "-header").alpha = 1
+                                    }
+                                })
+                                if (sender.contentOffset.y > 40) {
+                                    $ui.animate({
+                                        duration: 0.2,
+                                        animation: () => {
+                                            $(header.info.id + "-header-title").alpha = 1
+                                            $(header.info.id).alpha = 0
+                                        }
+                                    })
+                                } else {
+                                    $ui.animate({
+                                        duration: 0.2,
+                                        animation: () => {
+                                            $(header.info.id + "-header-title").alpha = 0
+                                            $(header.info.id).alpha = 1
+                                        }
+                                    })
+                                }
+                            } else if (sender.contentOffset.y < 5) {
+                                $ui.animate({
+                                    duration: 0.2,
+                                    animation: () => {
+                                        $(header.info.id + "-header").alpha = 0
+
+                                    }
+                                })
+                            }
+                        }
+                    } : {}, events),
+                    layout: $layout.fill
+                }]
+            }].concat(largeTitle ? {// 顶部bar，用于显示 设置 字样
+                type: "view",
+                props: {
+                    id: header.info.id + "-header",
+                    alpha: 0
+                },
+                layout: (make, view) => {
+                    make.left.top.right.inset(0)
+                    make.bottom.equalTo(view.super.safeAreaTop).offset(45)
+                },
+                views: [
+                    {
+                        type: "blur",
+                        props: { style: this.blurStyle },
+                        layout: $layout.fill
+                    },
+                    {
+                        type: "canvas",
+                        layout: (make, view) => {
+                            make.top.equalTo(view.prev.bottom)
+                            make.height.equalTo(1 / $device.info.screen.scale)
+                            make.left.right.inset(0)
+                        },
+                        events: {
+                            draw: (view, ctx) => {
+                                const width = view.frame.width
+                                const scale = $device.info.screen.scale
+                                ctx.strokeColor = $color("gray")
+                                ctx.setLineWidth(1 / scale)
+                                ctx.moveToPoint(0, 0)
+                                ctx.addLineToPoint(width, 0)
+                                ctx.strokePath()
+                            }
+                        }
+                    },
+                    { // 标题
+                        type: "label",
+                        props: {
+                            id: header.info.id + "-header-title",
+                            alpha: 0,
+                            text: header.info.title,
+                            font: $font("bold", 17),
+                            align: $align.center,
+                            bgcolor: $color("clear"),
+                            textColor: this.textColor
+                        },
+                        layout: (make, view) => {
+                            make.left.right.inset(0)
+                            make.top.equalTo(view.super.safeAreaTop)
+                            make.bottom.equalTo(view.super)
+                        }
+                    }
+                ]
+            } : {}),
+            layout: $layout.fill
+        }]
     }
 
     pushPageSheet(args) {
@@ -223,6 +371,7 @@ class UIKit {
     push(args) {
         const navTop = 45,
             views = args.views,
+            statusBarStyle = args.statusBarStyle === undefined ? 0 : args.statusBarStyle,
             title = args.title ?? (this.isLargeTitle ? "" : this.kernel.name),
             parent = args.parent ?? $l10n("BACK"),
             navButtons = args.navButtons ?? [],
@@ -231,7 +380,13 @@ class UIKit {
             disappeared = args.disappeared
         $ui.push({
             props: {
-                navButtons: this.toNavButton(navButtons),
+                statusBarStyle: statusBarStyle,
+                navButtons: navButtons.map(button => {
+                    if (this.isUIKitNavButton(button)) {
+                        return this.toJSBoxNavButton(button)
+                    }
+                    return button
+                }),
                 title: title,
                 navBarHidden: this.isLargeTitle,
                 bgcolor: $color(bgcolor),
@@ -252,7 +407,7 @@ class UIKit {
                         make.left.right.equalTo(view.super.safeArea)
                     }
                 },
-                {
+                { // 模拟大标题
                     type: "view",
                     props: { hidden: !this.isLargeTitle },
                     layout: (make, view) => {
@@ -284,7 +439,7 @@ class UIKit {
                                 }
                             }
                         },
-                        { // view
+                        {
                             type: "view",
                             layout: (make, view) => {
                                 make.size.left.top.equalTo(view.super.safeArea)
@@ -346,7 +501,7 @@ class UIKit {
      * @param {Boolean} hidden 是否隐藏
      * @param {String} alignRight 是否向右对齐，false 则向左对齐
      */
-    navButton(id, symbol, tapped, hidden, alignRight = true) {
+    navButton(id, symbol, tapped, hidden = false, alignRight = true) {
         const actionStart = () => {
             // 隐藏button，显示spinner
             const button = $(id)
@@ -681,6 +836,24 @@ class Kernel {
         return this.plugins[plugin]
     }
 
+    UIRender(views, props, events) {
+        $ui.render({
+            type: "view",
+            props: Object.assign({
+                titleColor: $color("#FFFFFF"),
+                title: this.UIKit.title ?? this.name,
+                navButtons: this.UIKit.navButtons
+            }, props),
+            layout: $layout.fill,
+            views: views,
+            events: Object.assign({
+                ready: () => {
+                    this.components.loading.controller.end()
+                }
+            }, events)
+        })
+    }
+
     /**
      * 渲染页面
      * @return {CallableFunction} 返回值为匿名函数，调用该函数开始渲染页面
@@ -701,33 +874,23 @@ class Kernel {
         // 注入页面和菜单
         this.components.page.controller.setPages(pages)
         this.components.menu.controller.setMenus(menus)
-        const props = (() => {
-            if (this.UIKit.isLargeTitle) {
-                return {
-                    navBarHidden: true,
-                    titleColor: $color("primaryText"),
-                    barColor: $color("primarySurface"),
-                    statusBarStyle: 0
-                }
-            } else {
-                return {
-                    titleColor: $color("#FFFFFF")
-                }
-            }
-        })()
+        const props = {
+            navBarHidden: true,
+            titleColor: $color("primaryText"),
+            barColor: $color("primarySurface"),
+            statusBarStyle: 0
+        }
         return () => {
-            $ui.render({
-                type: "view",
-                props: Object.assign({ id: "mainPage" }, props),
-                layout: $layout.fill,
-                views: [
+            this.UIRender(
+                [
                     this.components.page.view.getView(),
                     this.components.menu.view.getView()
                 ],
-                events: {
-                    ready: () => {
-                        this.components.loading.controller.end()
-                    },
+                Object.assign({
+                    title: this.UIKit.title ?? this.name,
+                    navButtons: this.UIKit.navButtons
+                }, props),
+                {
                     layoutSubviews: () => {
                         if (!this.orientation) {
                             this.orientation = $device.info.screen.orientation
@@ -746,7 +909,7 @@ class Kernel {
                         }
                     }
                 }
-            })
+            )
         }
     }
 }
