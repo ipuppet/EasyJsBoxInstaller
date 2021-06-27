@@ -151,8 +151,6 @@ class View {
                         this.change(this.selected, sender.info.index)
                         // 更新selected值
                         this.selected = sender.info.index
-                        // 更新页面标题
-                        this.UIKit.setTitle(menu.title)
                     }
                 }, typeof menu.doubleTapped === "function" ? {
                     doubleTapped: () => menu.doubleTapped()
