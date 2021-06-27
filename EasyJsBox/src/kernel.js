@@ -137,7 +137,7 @@ class UIKit {
                         indicatorInsets: $insets(50, 0, largeTitle ? 50 : 0, 0),
                         footer: footer,
                         data: data
-                    }, largeTitle ? header : $device.hasFaceID ? { header: {} } : {}),
+                    }, largeTitle ? header : this.isLargeTitle && !largeTitle ? { header: {} } : {}),
                     events: Object.assign(largeTitle ? {
                         didScroll: sender => {
                             // 下拉放大字体
