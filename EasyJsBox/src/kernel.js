@@ -1,4 +1,4 @@
-const VERSION = "0.3.10"
+const VERSION = "0.3.11"
 const ROOT_PATH = "/EasyJsBox" // JSBox path, not nodejs
 const SHARED_PATH = "shared://EasyJsBox"
 
@@ -141,7 +141,7 @@ class UIKit {
                         indicatorInsets: $insets(50, 0, largeTitle ? 50 : 0, 0),
                         footer: footer,
                         data: data
-                    }, largeTitle ? { header: header } : this.isLargeTitle && !largeTitle ? { header: header } : {}),
+                    }, Object.keys(header).length === 0 ? {} : { header: header }),
                     events: Object.assign(largeTitle ? {
                         didScroll: sender => {
                             // 顶部信息栏

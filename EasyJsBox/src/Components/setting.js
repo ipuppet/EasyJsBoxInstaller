@@ -1092,12 +1092,13 @@ class View {
     }
 
     getView() {
+        const largeTitle = this.dataCenter.get("largeTitle")
         const info = JSON.parse($file.read("/config.json").string)["info"]
-        const header = this.UIKit.headerTitle(
+        const header = largeTitle ? this.UIKit.headerTitle(
             `setting-title-${this.dataCenter.get("name")}`,
             $l10n("SETTING"),
             this.dataCenter.get("hasSectionTitle") ? 90 : 110
-        )
+        ) : {}
         const footer = this.dataCenter.get("footer", {
             type: "view",
             props: { height: 130 },
@@ -1125,9 +1126,9 @@ class View {
             header,
             footer,
             {}, // events
-            this.UIKit.isLargeTitle ? this.dataCenter.get("largeTitle") : false
+            this.UIKit.isLargeTitle ? largeTitle : false
         )
     }
 }
 
-module.exports = { Controller, View, VERSION: "1.0.7" }
+module.exports = { Controller, View, VERSION: "1.0.8" }
